@@ -1,7 +1,14 @@
 // Import express and JSON middleware
 const express = require('express');
-const pool = require('./db'); 
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+require('dotenv').config();
+console.log(process.env.SESSION_SECRET);  // Verify that the session secret is loaded
+const pool = require('./db');
+const bcrypt = require('bcryptjs'); 
+const expressSession = require('express-session');
 const app = express();
+
 
 // Set the port
 const PORT = process.env.PORT || 3000;
@@ -138,6 +145,103 @@ app.delete('/products/:id', (req, res) => {
     }
     res.status(204).send();
   });
+});
+
+
+
+
+// Session middleware setup
+app.use(session({
+  secret: process.env.SESSION_SECRET,  // Use the environment variable
+  resave: false, 
+  saveUninitialized: true,
+}));
+
+// Initialize Passport.js
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Define Passport.js local strategy for login
+passport.use(new LocalStrategy(
+  function(username, password, done) {
+    // Query database to verify username and password
+    pool.query('SELECT * FROM users WHERE username = $1', [username], (err, result) => {
+      if (err) return done(err);
+
+      if (result.rows.length === 0) {
+        return done(null, false, { message: 'Incorrect username' });
+      }
+
+      const user = result.rows[0];
+
+      // Assuming you have a hashed password comparison function
+      if (user.password !== password) { // Replace with bcrypt comparison if necessary
+        return done(null, false, { message: 'Incorrect password' });
+      }
+
+      return done(null, user);
+    });
+  }
+));
+
+// Serialize user to save their information in the session
+passport.serializeUser((user, done) => {
+  done(null, user.id); // Storing the user ID in the session
+});
+
+// Deserialize user to retrieve user information from the session
+passport.deserializeUser((id, done) => {
+  pool.query('SELECT * FROM users WHERE id = $1', [id], (err, result) => {
+    if (err) return done(err);
+    done(null, result.rows[0]);
+  });
+});
+
+// POST /login route for login functionality
+app.post('/login', passport.authenticate('local', {
+  successRedirect: '/dashboard', // Redirect to a dashboard after successful login
+  failureRedirect: '/login', // Redirect back to login if authentication fails
+}));
+
+
+
+
+// POST /register - User registration endpoint
+app.post('/register', async (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).send('Username and password are required');
+  }
+
+  // Check if the user already exists in the database
+  const query = 'SELECT * FROM users WHERE username = $1';
+  const values = [username];
+
+  try {
+    const result = await pool.query(query, values);
+    if (result.rows.length > 0) {
+      return res.status(400).send('User already exists');
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Insert the new user into the database
+    const insertQuery = 'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING *';
+    const insertValues = [username, hashedPassword];
+    
+    const insertResult = await pool.query(insertQuery, insertValues);
+    const newUser = insertResult.rows[0];
+
+    // Respond with the new user (excluding the password)
+    const { password: _, ...userWithoutPassword } = newUser;
+    res.status(201).json(userWithoutPassword);
+    
+  } catch (error) {
+    console.error('Error registering user:', error);
+    res.status(500).send('Internal Server Error');
+  }
 });
 
 
