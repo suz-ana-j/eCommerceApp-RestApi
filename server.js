@@ -7,7 +7,6 @@ const bcrypt = require('bcryptjs');
 const expressSession = require('express-session');
 const app = express();
 
-
 // Set the port
 const PORT = process.env.PORT || 3000;
 
@@ -16,10 +15,23 @@ app.use(express.json());
 
 // Session middleware setup
 app.use(expressSession({
-  secret: process.env.SESSION_SECRET,  // Use the environment variable
+  secret: process.env.SESSION_SECRET || 'fallbackSecret',  // Use the environment variable
   resave: false, 
   saveUninitialized: true,
+  cookie: { secure: false }
 }));
+
+// Initialize passport
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Authentication check middleware
+function isAuthenticated(req, res, next) {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.status(401).json({ message: 'Unauthorized' });
+}
 
 // Simple route for testing
 app.get('/', (req, res) => {
@@ -36,12 +48,6 @@ app.get('/test-db', (req, res) => { // Changed the route to avoid duplicate '/'
   });
 });
 
-
-
-// Initialize Passport.js
-app.use(passport.initialize());
-app.use(passport.session());
-
 // Define Passport.js local strategy for login
 passport.use(new LocalStrategy(
   function(username, password, done) {
@@ -56,11 +62,13 @@ passport.use(new LocalStrategy(
       const user = result.rows[0];
 
       // Assuming you have a hashed password comparison function
-      if (user.password !== password) { // Replace with bcrypt comparison if necessary
-        return done(null, false, { message: 'Incorrect password' });
-      }
-
-      return done(null, user);
+      bcrypt.compare(password, user.password, (err, isMatch) => {
+        if (err) return done(err);
+        if (!isMatch) {
+          return done(null, false, { message: 'Incorrect password' });
+        }
+        return done(null, user);
+      });
     });
   }
 ));
@@ -83,9 +91,6 @@ app.post('/login', passport.authenticate('local', {
   successRedirect: '/dashboard', // Redirect to a dashboard after successful login
   failureRedirect: '/login', // Redirect back to login if authentication fails
 }));
-
-
-
 
 // POST /register - User registration endpoint
 app.post('/register', async (req, res) => {
@@ -125,23 +130,15 @@ app.post('/register', async (req, res) => {
   }
 });
 
-
-
-
-
-// Get all users (Admin only)
-app.get('/users', (req, res) => {
-  // Check if the user is an admin
-  if (!req.user || req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Access denied' });
+// Get all users (Authenticated users only)
+app.get('/users', isAuthenticated, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM users');
+    res.json(result.rows); // Send user data
+  } catch (err) {
+    console.error('Error fetching users:', err);
+    res.status(500).send('Internal Server Error');
   }
-
-  pool.query('SELECT id, username FROM users', (err, result) => {
-    if (err) {
-      return res.status(500).json({ error: 'Database query error' });
-    }
-    res.json(result.rows);
-  });
 });
 
 // Get user details by user ID (Authenticated users only)
@@ -217,10 +214,6 @@ app.put('/users/:id', (req, res) => {
     res.json(result.rows[0]);
   });
 });
-
-
-
-
 
 // Get all products 
 app.get('/products', (req, res) => {
@@ -338,12 +331,7 @@ app.delete('/products/:id', (req, res) => {
   });
 });
 
-
-
-
-
 // Start the server
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
-
