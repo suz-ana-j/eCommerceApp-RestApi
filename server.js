@@ -1,6 +1,6 @@
 // Import express and JSON middleware
-import express from 'express';
-import pool from './db'; 
+const express = require('express');
+const pool = require('./db'); 
 const app = express();
 
 // Set the port
@@ -15,7 +15,7 @@ app.get('/', (req, res) => {
 });
 
 // Test the database connection by querying a table (like products)
-app.get('/test-db', (req, res) => { 
+app.get('/test-db', (req, res) => { // Changed the route to avoid duplicate '/'
   pool.query('SELECT * FROM products LIMIT 1', (err, result) => {
     if (err) {
       return res.status(500).send('Database query error');
@@ -28,3 +28,4 @@ app.get('/test-db', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
