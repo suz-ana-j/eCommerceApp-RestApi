@@ -2,10 +2,10 @@ const { Pool } = require('pg'); // Use require instead of import
 
 // Set up the database connection
 const pool = new Pool({
-  user: 'your_db_user', // replace with your PostgreSQL username
+  user: 'postgres', 
   host: 'localhost',
-  database: 'your_db_name', // replace with your database name
-  password: 'your_db_password', // replace with your PostgreSQL password
+  database: 'your_db_nameeCommerceAppRest-Api', 
+  password: 'postgres', 
   port: 5432, // default PostgreSQL port
 });
 
