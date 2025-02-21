@@ -24,6 +24,27 @@ app.get('/test-db', (req, res) => { // Changed the route to avoid duplicate '/'
   });
 });
 
+// Get all products 
+app.get('/products', (req, res) => {
+  const { category } = req.query;
+  
+  let query = 'SELECT * FROM products';
+  let queryParams = [];
+
+  if (category) {
+    query += ' WHERE category_id = $1';
+    queryParams = [category];
+  }
+
+  pool.query(query, queryParams, (err, result) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database query error' });
+    }
+    res.json(result.rows);
+  });
+});
+
+
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
