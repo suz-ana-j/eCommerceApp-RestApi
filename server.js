@@ -246,6 +246,100 @@ app.delete('/products/:id', (req, res) => {
 
 
 
+// Get all users (Admin only)
+app.get('/users', (req, res) => {
+  // Check if the user is an admin
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  pool.query('SELECT id, username FROM users', (err, result) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database query error' });
+    }
+    res.json(result.rows);
+  });
+});
+
+// Get user details by user ID (Authenticated users only)
+app.get('/users/:id', (req, res) => {
+  const { id } = req.params;
+
+  // Ensure the user is logged in and is accessing their own account
+  if (!req.user || req.user.id !== parseInt(id)) {
+    return res.status(403).json({ error: 'Unauthorized access' });
+  }
+
+  pool.query('SELECT id, username FROM users WHERE id = $1', [id], (err, result) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database query error' });
+    }
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(result.rows[0]);
+  });
+});
+
+// Update user details (Authenticated users only)
+app.put('/users/:id', (req, res) => {
+  const { id } = req.params;
+  const { username, password } = req.body;
+
+  // Ensure the user is logged in and is updating their own account
+  if (!req.user || req.user.id !== parseInt(id)) {
+    return res.status(403).json({ error: 'Unauthorized access' });
+  }
+
+  const updateFields = [];
+  const updateValues = [];
+
+  if (username) {
+    updateFields.push('username = $' + (updateValues.length + 1));
+    updateValues.push(username);
+  }
+  if (password) {
+    bcrypt.hash(password, 10, (err, hashedPassword) => {
+      if (err) return res.status(500).json({ error: 'Password hashing error' });
+      updateFields.push('password = $' + (updateValues.length + 1));
+      updateValues.push(hashedPassword);
+
+      const query = `UPDATE users SET ${updateFields.join(', ')} WHERE id = $${updateValues.length + 1} RETURNING id, username`;
+      updateValues.push(id);
+
+      pool.query(query, updateValues, (err, result) => {
+        if (err) {
+          return res.status(500).json({ error: 'Database query error' });
+        }
+        if (result.rows.length === 0) {
+          return res.status(404).json({ error: 'User not found' });
+        }
+        res.json(result.rows[0]);
+      });
+    });
+    return;
+  }
+
+  // If no password is provided, update the username
+  const query = `UPDATE users SET ${updateFields.join(', ')} WHERE id = $${updateValues.length + 1} RETURNING id, username`;
+  updateValues.push(id);
+
+  pool.query(query, updateValues, (err, result) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database query error' });
+    }
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(result.rows[0]);
+  });
+});
+
+
+
+
+
+
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
