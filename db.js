@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+const { Pool } = require('pg'); // Use require instead of import
 
 // Set up the database connection
 const pool = new Pool({
@@ -14,4 +14,6 @@ pool.connect()
   .then(() => console.log('Connected to PostgreSQL database'))
   .catch((err) => console.error('Database connection error:', err));
 
-export default pool;
+// Export pool for use in other files
+module.exports = pool;
+
