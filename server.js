@@ -6,6 +6,7 @@ const pool = require('./db');
 const bcrypt = require('bcryptjs'); 
 const expressSession = require('express-session');
 const app = express();
+app.use(express.json());
 
 // Set the port
 const PORT = process.env.PORT || 3000;
@@ -330,6 +331,72 @@ app.delete('/products/:id', (req, res) => {
     res.status(204).send();
   });
 });
+
+
+
+
+// Create a new cart
+app.post('/cart', async (req, res) => {
+  try {
+      const { user_id } = req.body;
+      const newCart = await pool.query(
+          'INSERT INTO cart (user_id) VALUES ($1) RETURNING *',
+          [user_id]
+      );
+      res.json(newCart.rows[0]);
+  } catch (err) {
+      res.status(500).json({ error: err.message });
+  }
+});
+
+// Add a product to an existing cart
+app.post('/cart/:cartId', async (req, res) => {
+  try {
+      const { cartId } = req.params;
+      const { product_id, quantity } = req.body;
+      
+      // Check if cart exists
+      const cartExists = await pool.query('SELECT * FROM cart WHERE cart_id = $1', [cartId]);
+      if (cartExists.rows.length === 0) {
+          return res.status(404).json({ error: 'Cart not found' });
+      }
+
+      const addProduct = await pool.query(
+          'INSERT INTO cart_items (cart_id, product_id, quantity) VALUES ($1, $2, $3) RETURNING *',
+          [cartId, product_id, quantity]
+      );
+      res.json(addProduct.rows[0]);
+  } catch (err) {
+      res.status(500).json({ error: err.message });
+  }
+});
+
+// Get cart details
+app.get('/cart/:cartId', async (req, res) => {
+  try {
+      const { cartId } = req.params;
+      
+      const cartItems = await pool.query(
+          `SELECT ci.cart_id, ci.product_id, ci.quantity, p.name, p.price 
+           FROM cart_items ci 
+           JOIN products p ON ci.product_id = p.product_id 
+           WHERE ci.cart_id = $1`,
+          [cartId]
+      );
+      
+      if (cartItems.rows.length === 0) {
+          return res.status(404).json({ error: 'Cart not found or empty' });
+      }
+      
+      res.json(cartItems.rows);
+  } catch (err) {
+      res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+
 
 // Start the server
 app.listen(PORT, () => {
