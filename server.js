@@ -216,6 +216,10 @@ app.put('/users/:id', (req, res) => {
   });
 });
 
+
+
+// Product Endpoints
+
 // Get all products 
 app.get('/products', (req, res) => {
   const { category } = req.query;
@@ -334,6 +338,7 @@ app.delete('/products/:id', (req, res) => {
 
 
 
+// Cart Endpoints
 
 // Create a new cart
 app.post('/cart', async (req, res) => {
@@ -398,6 +403,7 @@ app.get('/cart/:cartId', async (req, res) => {
 
 
 // Checkout Endpoint
+
 app.post('/cart/:cartId/checkout', async (req, res) => {
   const { cartId } = req.params;
 
@@ -447,6 +453,44 @@ app.post('/cart/:cartId/checkout', async (req, res) => {
       res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+
+
+
+// Order Endpoints
+
+// Get all orders
+app.get('/orders', async (req, res) => {
+  try {
+      const orders = await pool.query('SELECT * FROM orders');
+      res.status(200).json(orders.rows);
+  } catch (error) {
+      console.error('Error fetching orders:', error);
+      res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get a specific order by ID
+app.get('/orders/:orderId', async (req, res) => {
+  const { orderId } = req.params;
+
+  try {
+      const order = await pool.query(
+          'SELECT * FROM orders WHERE id = $1',
+          [orderId]
+      );
+
+      if (order.rows.length === 0) {
+          return res.status(404).json({ error: 'Order not found' });
+      }
+
+      res.status(200).json(order.rows[0]);
+  } catch (error) {
+      console.error('Error fetching order:', error);
+      res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 
 
