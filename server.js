@@ -7,12 +7,49 @@ const bcrypt = require('bcryptjs');
 const expressSession = require('express-session');
 const app = express();
 app.use(express.json());
+const swaggerJsdoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
 
 // Set the port
 const PORT = process.env.PORT || 3000;
 
 // Middleware to parse JSON requests
 app.use(express.json()); 
+
+
+// Swagger configuration
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'E-Commerce App API',
+      version: '1.0.0',
+      description: 'API documentation for the E-Commerce App',
+    },
+    servers: [
+      {
+        url: 'http://localhost:3000',
+      },
+    ],
+  },
+  apis: ['./server.js'], // Path to your API docs (routes are in this file for this example)
+};
+
+const swaggerDocs = swaggerJsdoc(swaggerOptions);
+
+// Swagger UI setup
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
+// PostgreSQL client setup
+const pool = new Pool({
+  user: 'your-username', // Replace with your database username
+  host: 'localhost',
+  database: 'ecommerce',
+  password: 'your-password', // Replace with your database password
+  port: 5432,
+});
+
+
 
 // Session middleware setup
 app.use(expressSession({
@@ -39,6 +76,31 @@ app.get('/', (req, res) => {
   res.send('E-Commerce API is running!');
 });
 
+/**
+ * @swagger
+ * /users:
+ *   get:
+ *     summary: Get all users
+ *     description: Retrieve a list of all users.
+ *     responses:
+ *       200:
+ *         description: A list of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   username:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ */
+
+
 // Test the database connection by querying a table (like products)
 app.get('/test-db', (req, res) => { // Changed the route to avoid duplicate '/'
   pool.query('SELECT * FROM products LIMIT 1', (err, result) => {
@@ -48,6 +110,32 @@ app.get('/test-db', (req, res) => { // Changed the route to avoid duplicate '/'
     res.json(result.rows);
   });
 });
+
+
+/**
+ * @swagger
+ * /users:
+ *   get:
+ *     summary: Get all users
+ *     description: Retrieve a list of all users.
+ *     responses:
+ *       200:
+ *         description: A list of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   username:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ */
+
 
 // Define Passport.js local strategy for login
 passport.use(new LocalStrategy(
@@ -142,6 +230,30 @@ app.get('/users', isAuthenticated, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /users:
+ *   get:
+ *     summary: Get all users
+ *     description: Retrieve a list of all users.
+ *     responses:
+ *       200:
+ *         description: A list of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   username:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ */
+
 // Get user details by user ID (Authenticated users only)
 app.get('/users/:id', (req, res) => {
   const { id } = req.params;
@@ -161,6 +273,30 @@ app.get('/users/:id', (req, res) => {
     res.json(result.rows[0]);
   });
 });
+
+/**
+ * @swagger
+ * /users:
+ *   get:
+ *     summary: Get all users
+ *     description: Retrieve a list of all users.
+ *     responses:
+ *       200:
+ *         description: A list of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   username:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ */
 
 // Update user details (Authenticated users only)
 app.put('/users/:id', (req, res) => {
@@ -240,6 +376,32 @@ app.get('/products', (req, res) => {
   });
 });
 
+
+/**
+ * @swagger
+ * /users:
+ *   get:
+ *     summary: Get all users
+ *     description: Retrieve a list of all users.
+ *     responses:
+ *       200:
+ *         description: A list of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   username:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ */
+
+
 // Get a single product by its ID
 app.get('/products/:id', (req, res) => {
   const { id } = req.params;
@@ -254,6 +416,31 @@ app.get('/products/:id', (req, res) => {
     res.json(result.rows[0]);
   });
 });
+
+/**
+ * @swagger
+ * /users:
+ *   get:
+ *     summary: Get all users
+ *     description: Retrieve a list of all users.
+ *     responses:
+ *       200:
+ *         description: A list of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   username:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ */
+
 
 // Create a new product (admin only)
 app.post('/products', (req, res) => {
@@ -399,6 +586,29 @@ app.get('/cart/:cartId', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /users:
+ *   get:
+ *     summary: Get all users
+ *     description: Retrieve a list of all users.
+ *     responses:
+ *       200:
+ *         description: A list of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   username:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ */
 
 
 
@@ -470,6 +680,30 @@ app.get('/orders', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /users:
+ *   get:
+ *     summary: Get all users
+ *     description: Retrieve a list of all users.
+ *     responses:
+ *       200:
+ *         description: A list of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   username:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ */
+
 // Get a specific order by ID
 app.get('/orders/:orderId', async (req, res) => {
   const { orderId } = req.params;
@@ -491,8 +725,29 @@ app.get('/orders/:orderId', async (req, res) => {
   }
 });
 
-
-
+/**
+ * @swagger
+ * /users:
+ *   get:
+ *     summary: Get all users
+ *     description: Retrieve a list of all users.
+ *     responses:
+ *       200:
+ *         description: A list of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   username:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ */
 
 
 
