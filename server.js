@@ -397,6 +397,61 @@ app.get('/cart/:cartId', async (req, res) => {
 
 
 
+// Checkout Endpoint
+app.post('/cart/:cartId/checkout', async (req, res) => {
+  const { cartId } = req.params;
+
+  try {
+      // Validate the cart
+      const cart = await pool.query(
+          'SELECT * FROM carts WHERE id = $1',
+          [cartId]
+      );
+
+      if (cart.rows.length === 0) {
+          return res.status(404).json({ error: 'Cart not found' });
+      }
+
+      // Check if the cart has any items
+      const cartItems = await pool.query(
+          'SELECT * FROM cart_items WHERE cart_id = $1',
+          [cartId]
+      );
+
+      if (cartItems.rows.length === 0) {
+          return res.status(400).json({ error: 'Cart is empty' });
+      }
+
+      // Simulate payment processing (assuming success)
+      const paymentSuccessful = true; // Placeholder logic
+      if (!paymentSuccessful) {
+          return res.status(400).json({ error: 'Payment failed' });
+      }
+
+      // Create a new order
+      const order = await pool.query(
+          'INSERT INTO orders (cart_id, status) VALUES ($1, $2) RETURNING *',
+          [cartId, 'completed']
+      );
+
+      // Clear the cart after successful checkout
+      await pool.query(
+          'DELETE FROM cart_items WHERE cart_id = $1',
+          [cartId]
+      );
+
+      return res.status(200).json({ message: 'Checkout successful', order: order.rows[0] });
+
+  } catch (error) {
+      console.error('Error during checkout:', error);
+      res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+
+
+
 
 // Start the server
 app.listen(PORT, () => {
