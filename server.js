@@ -40,14 +40,7 @@ const swaggerDocs = swaggerJsdoc(swaggerOptions);
 // Swagger UI setup
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-// PostgreSQL client setup
-const pool = new Pool({
-  user: 'your-username', // Replace with your database username
-  host: 'localhost',
-  database: 'ecommerce',
-  password: 'your-password', // Replace with your database password
-  port: 5432,
-});
+
 
 
 
